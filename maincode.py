@@ -126,12 +126,20 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.KEYDOWN:
+            # if board.get_type((player.rect.x, player.rect.y + 50)) == '%':
+            #     if board.get_type((player.rect.x, player.rect.y + 100)) != '#':
+            #         pt = board.get_list_part((player.rect.x, player.rect.y + 50))
+            #         board.coords[pt[0]][pt[1]][2], board.coords[pt[0] + 1][pt[1]][2] = \
+            #             board.coords[pt[0] + 1][pt[1]][2], board.coords[pt[0]][pt[1]][2]
+            #         player.move('down')
+            # elif board.get_type((player.rect.x, player.rect.y + 50)) != '#':
+            #     player.move('down')
             button = event.key
             diff = {
-            pygame.K_UP: (0, -50, 'up'),
-            pygame.K_LEFT: (-50, 0, 'left'),
-            pygame.K_RIGHT: (50, 0, 'right'),
-            pygame.K_DOWN: (0, 50, 'down'),
+                pygame.K_UP: (0, -50, 'up'),
+                pygame.K_LEFT: (-50, 0, 'left'),
+                pygame.K_RIGHT: (50, 0, 'right'),
+                pygame.K_DOWN: (0, 50, 'down'),
             }
             if button in diff:
                 diff = diff[button]
