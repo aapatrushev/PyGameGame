@@ -5,62 +5,142 @@ import os
 def load_image(name, colorkey=None):
     fullname = os.path.join('project/data/sprites', name)
     image = pygame.image.load(fullname).convert_alpha()
-    if colorkey is not None:
-        if colorkey == -1:
-            colorkey = image.get_at((0, 0))
-        image.set_colorkey(colorkey)
-    else:
-        image = image.convert_alpha()
     return image
 
 
-class Player(pygame.sprite.Sprite):
+class Object(pygame.sprite.Sprite):
+    DIFF = {
+        pygame.K_UP: (0, -1),
+        pygame.K_LEFT: (-1, 0),
+        pygame.K_RIGHT: (1, 0),
+        pygame.K_DOWN: (0, 1),
+    }
+
+    def __init__(self, grp, coords):
+        super().__init__(grp)
+        self.coords = coords
+
+    def move(self, dir, brd):
+        return False
+
+    def move_sprite(self):
+        self.rect.x, self.rect.y = self.coords[0] * 50, self.coords[1] * 50
+
+
+class Player(Object):
+    SYMBOL = 'H'
+
     def __init__(self, group, coords):
-        super().__init__(group)
+        super().__init__(group, coords)
         self.group = group
         self.image = pygame.transform.scale(load_image('chelovechek.png'), (50, 50))
         self.rect = self.image.get_rect()
-        self.rect.x = coords[0]
-        self.rect.y = coords[1]
-
-    def move(self, dir):
-        if dir == 'up':
-            self.rect.y -= 50
-        if dir == 'down':
-            self.rect.y += 50
-        if dir == 'right':
-            self.rect.x += 50
-        if dir == 'left':
-            self.rect.x -= 50
-        print(board.get_type((self.rect.x, self.rect.y)))
-
-
-class Box(pygame.sprite.Sprite):
-    def __init__(self, group, coords):
-        super().__init__(group)
-        self.image = load_image('box.png')
-        self.rect = self.image.get_rect()
-        self.rect.x = coords[0]
-        self.rect.y = coords[1]
+        self.image = pygame.transform.scale(self.image, (50, 50))
+        self.move_sprite()
+        self.coords = coords
 
     def move(self, dir, brd):
-        if dir == 'up':
-            self.rect.y -= 50
-            for i in range(len(brd.coords)):
-                for q in range(len(brd.coords[i])):
-                    if brd.coords[i][q][0] == self.rect.y and brd.coords[i][q][1] == self.rect.x:
-                        brd.coords[i][q][2] = '.'
-                        brd.coords[i - 1][q][2] = '%'
-        if dir == 'down':
-            self.rect.y += 50
-        if dir == 'right':
-            self.rect.x += 50
-        if dir == 'left':
-            self.rect.x -= 50
+        x, y = self.coords
+        x, y = x + self.DIFF[dir][0], y + self.DIFF[dir][1]
+        ob = brd.get_object((x, y))
+        if ob.move(dir, brd):
+            brd.objects.pop(self.coords)
+            self.coords = (x, y)
+            brd.objects[self.coords] = self
+            self.move_sprite()
+
+
+class Wall(Object):
+    SYMBOL = '#'
+
+    def __init__(self, group, coords):
+        super().__init__(group, coords)
+        self.image = load_image('wall.png')
+        self.rect = self.image.get_rect()
+        self.move_sprite()
+        self.image = pygame.transform.scale(self.image, (50, 50))
+
+
+class Grass(Object):
+    SYMBOL = '.'
+
+    def __init__(self, group, coords):
+        super().__init__(group, coords)
+        self.image = load_image('grass.png')
+        self.rect = self.image.get_rect()
+        self.move_sprite()
+
+    def move(self, dir, brd):
+        return True
+
+
+class Box(Object):
+    SYMBOL = '%'
+
+    def __init__(self, group, coords):
+        super().__init__(group, coords)
+        self.image = load_image('box.png')
+        self.rect = self.image.get_rect()
+        self.move_sprite()
+
+    def move(self, dir, brd):
+        x, y = self.coords
+        x, y = x + self.DIFF[dir][0], y + self.DIFF[dir][1]
+        ob = brd.get_object((x, y))
+        if isinstance(ob, Place):
+            brd.objects.pop(self.coords)
+            brd.object_sprites.remove(self)
+            brd.cells[y][x] = Grass(brd.ground_sprites, (x, y))
+            brd.ground_sprites.remove(ob)
+            return True
+        elif not isinstance(ob, Box) and ob.move(dir, brd):
+            brd.objects.pop(self.coords)
+            self.coords = (x, y)
+            brd.objects[self.coords] = self
+            self.move_sprite()
+            return True
+        return False
+
+
+class Place(Grass):
+    SYMBOL = '+'
+
+    def __init__(self, group, coords):
+        super().__init__(group, coords)
+        self.image = load_image('creature.png')
+        self.rect = self.image.get_rect()
+        self.image = pygame.transform.scale(self.image, (50, 50))
+        self.move_sprite()
 
 
 class Board:
-    def __init__(self, targlst, grp):
+    def __init__(self, cells):
+        self.ground_sprites = pygame.sprite.Group()
+        self.object_sprites = pygame.sprite.Group()
+        class_type = {
+            '#': Wall,
+            '.': Grass,
+            '%': Grass,
+            '+': Place,
+            'H': Grass,
+        }
+        self.cells = [
+            [
+                class_type[q](self.ground_sprites, (x, y))
+                for x, q in enumerate(a)
+            ]
+            for y, a in enumerate(cells)
+        ]
+        class_type = {
+            'H': Player,
+            '%': Box,
+        }
+        self.objects = {
+            (x, y): class_type[q](self.object_sprites, (x, y))
+            for y, a in enumerate(cells)
+            for x, q in enumerate(a)
+            if q in class_type
+        }
         self.height = 7
         self.width = 10
         self.coords = list()
@@ -68,57 +148,45 @@ class Board:
         self.left = 0
         self.top = 0
         self.cell_size = 50
-        self.sprites = grp
-        self.boxlist = []
+        self.wholelist = {}
         self.startplayercoords = 0, 0
-        for i in range(self.height):
-            self.coords.append(list())
-            for q in range(self.width):
-                targ = targlst[i + 1][q]
-                self.coords[i].append([i * self.cell_size, q * self.cell_size, targ])
-                sprite = pygame.sprite.Sprite(self.sprites)
-                if targ == '%':
-                    sprite.image = load_image('grass.png')
-                    self.boxlist.append(Box(self.sprites, (q * self.cell_size, i * self.cell_size)))
-                elif targ == '#':
-                    sprite.image = load_image('wall.png')
-                elif targ == '+':
-                    sprite.image = load_image('creature.png')
-                elif targ == 'H':
-                    sprite.image = load_image('grass.png')
-                    self.startplayercoords = q * self.cell_size, i * self.cell_size
-                else:
-                    sprite.image = load_image('grass.png')
-                sprite.rect = sprite.image.get_rect()
-                sprite.rect.x = q * self.cell_size
-                sprite.rect.y = i * self.cell_size
-                sprite.image = pygame.transform.scale(sprite.image, (50, 50))
+
+    @classmethod
+    def load(cls, path):
+        with open(path, encoding="utf8") as level_prot:
+            lines = level_prot.readlines()
+            lines = [a.strip() for a in lines]
+            lines = [a for a in lines if a]
+            return cls(lines)
 
     def render(self, place):
-        self.sprites.draw(place)
+        self.ground_sprites.draw(place)
+        self.object_sprites.draw(place)
 
-    def get_type(self, crds):
-        return self.coords[crds[1] // self.cell_size][crds[0] // self.cell_size][2]
+    def get_object(self, crds):
+        x, y = crds
+        if (x, y) in self.objects:
+            return self.objects[(x, y)]
+        return self.cells[y][x]
 
-    def get_list_part(self, crds):
-        return crds[1] // self.cell_size, crds[0] // self.cell_size
+    def get_player(self):
+        for i in self.objects.values():
+            if isinstance(i, Player):
+                return i
+
+    def any_boxes(self):
+        for i in self.objects.values():
+            if isinstance(i, Box):
+                return True
+        return False
 
 
-get_lst = list()
 m = 0
-with open('project/data/level_maps/level_beta.txt', encoding="utf8") as level_prot:
-    lst = level_prot.readlines()
-    for a in range(len(lst)):
-        get_lst.append(lst[a])
-        for q in range(len(lst[a])):
-            if lst[a][q] == '+':
-                m += 1
 win_as = [0, m]
 pygame.init()
-screen = pygame.display.set_mode((500, 350))
-all_sprites = pygame.sprite.Group()
-board = Board(get_lst, all_sprites)
-player = Player(all_sprites, board.startplayercoords)
+screen = pygame.display.set_mode((500, 350), flags=pygame.SRCALPHA)
+board = Board.load('project/data/level_maps/level_beta.txt')
+player = board.get_player()
 running = True
 board.render(screen)
 while running:
@@ -126,25 +194,11 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.KEYDOWN:
-            # if board.get_type((player.rect.x, player.rect.y + 50)) == '%':
-            #     if board.get_type((player.rect.x, player.rect.y + 100)) != '#':
-            #         pt = board.get_list_part((player.rect.x, player.rect.y + 50))
-            #         board.coords[pt[0]][pt[1]][2], board.coords[pt[0] + 1][pt[1]][2] = \
-            #             board.coords[pt[0] + 1][pt[1]][2], board.coords[pt[0]][pt[1]][2]
-            #         player.move('down')
-            # elif board.get_type((player.rect.x, player.rect.y + 50)) != '#':
-            #     player.move('down')
             button = event.key
-            diff = {
-                pygame.K_UP: (0, -50, 'up'),
-                pygame.K_LEFT: (-50, 0, 'left'),
-                pygame.K_RIGHT: (50, 0, 'right'),
-                pygame.K_DOWN: (0, 50, 'down'),
-            }
-            if button in diff:
-                diff = diff[button]
-                if board.get_type((player.rect.x + diff[0], player.rect.y + diff[1])) != '#':
-                    player.move(diff[2])
+            if button in Object.DIFF:
+                player.move(button, board)
+                if not board.any_boxes():
+                    running = False
         screen.fill((0, 0, 0))
         board.render(screen)
         pygame.display.flip()
