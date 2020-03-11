@@ -1,6 +1,7 @@
 import pygame
 import os
 
+
 def end_screen():
     pass
 
@@ -46,7 +47,7 @@ def start_screen():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
-            elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN:
                 return main_code()
         pygame.display.flip()
 
