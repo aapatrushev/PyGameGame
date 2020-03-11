@@ -1,8 +1,57 @@
 import pygame
 import os
 
+def end_screen():
+    pass
 
-def load_image(name, colorkey=None):
+
+def main_code():
+    board = Board.load('project/data/level_maps/level_beta.txt')
+    player = board.get_player()
+    running = True
+    board.render(screen)
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                button = event.key
+                if button in Object.DIFF:
+                    player.move(button, board)
+                    if not board.any_boxes():
+                        end_screen()
+            screen.fill((0, 0, 0))
+            board.render(screen)
+            pygame.display.flip()
+
+
+def start_screen():
+    intro_text = ["Сокобан", "",
+                  "Нажмите где угодно",
+                  "чтобы начать"]
+
+    fon = pygame.transform.scale(load_image('fon.jpg'), (500, 500))
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                return main_code()
+        pygame.display.flip()
+
+
+def load_image(name):
     fullname = os.path.join('project/data/sprites', name)
     image = pygame.image.load(fullname).convert_alpha()
     return image
@@ -107,7 +156,7 @@ class Place(Grass):
 
     def __init__(self, group, coords):
         super().__init__(group, coords)
-        self.image = load_image('creature.png')
+        self.image = load_image('fall.png')
         self.rect = self.image.get_rect()
         self.image = pygame.transform.scale(self.image, (50, 50))
         self.move_sprite()
@@ -181,24 +230,6 @@ class Board:
         return False
 
 
-m = 0
-win_as = [0, m]
 pygame.init()
 screen = pygame.display.set_mode((500, 350), flags=pygame.SRCALPHA)
-board = Board.load('project/data/level_maps/level_beta.txt')
-player = board.get_player()
-running = True
-board.render(screen)
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.KEYDOWN:
-            button = event.key
-            if button in Object.DIFF:
-                player.move(button, board)
-                if not board.any_boxes():
-                    running = False
-        screen.fill((0, 0, 0))
-        board.render(screen)
-        pygame.display.flip()
+start_screen()
