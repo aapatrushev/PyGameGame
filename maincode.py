@@ -2,36 +2,11 @@ import pygame
 import os
 
 
-def end_screen():
-    pass
+def level_choosing():
+    intro_text = ["Уровень 1                                  Уровень 2", "",
+                  "Нажмите здесь                         Нажмите здесь"]
 
-
-def main_code():
-    board = Board.load('project/data/level_maps/level_beta.txt')
-    player = board.get_player()
-    running = True
-    board.render(screen)
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            if event.type == pygame.KEYDOWN:
-                button = event.key
-                if button in Object.DIFF:
-                    player.move(button, board)
-                    if not board.any_boxes():
-                        end_screen()
-            screen.fill((0, 0, 0))
-            board.render(screen)
-            pygame.display.flip()
-
-
-def start_screen():
-    intro_text = ["Сокобан", "",
-                  "Нажмите где угодно",
-                  "чтобы начать"]
-
-    fon = pygame.transform.scale(load_image('fon.jpg'), (500, 500))
+    fon = pygame.transform.scale(load_image('fon.jpg'), (500, 350))
     screen.blit(fon, (0, 0))
     font = pygame.font.Font(None, 30)
     text_coord = 50
@@ -48,7 +23,85 @@ def start_screen():
             if event.type == pygame.QUIT:
                 return False
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                return main_code()
+                if event.pos[0] < 250:
+                    return main_code('project/data/level_maps/level_beta.txt')
+                else:
+                    return main_code('project/data/level_maps/level1.txt')
+        pygame.display.flip()
+
+
+def end_screen():
+    intro_text = ["                       Уровень закончен", "",
+                  "                       Нажмите где угодно",
+                  "                        чтобы продолжить"]
+
+    fon = pygame.transform.scale(load_image('fon.jpg'), (500, 350))
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                return level_choosing()
+        pygame.display.flip()
+
+
+def main_code(lvl_key):
+    board = Board.load(lvl_key)
+    player = board.get_player()
+    running = True
+    board.render(screen)
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                button = event.key
+                if button in Object.DIFF:
+                    player.move(button, board)
+                    if not board.any_boxes():
+                        end_screen()
+            if pygame.key.get_pressed()[pygame.K_r]:
+                board = Board.load(lvl_key)
+                player = board.get_player()
+            screen.fill((0, 0, 0))
+            board.render(screen)
+            pygame.display.flip()
+
+
+def start_screen():
+    intro_text = ["Сокобан", "",
+                  "Нажмите где угодно",
+                  "чтобы начать"]
+
+    fon = pygame.transform.scale(load_image('fon.jpg'), (500, 350))
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                return level_choosing()
         pygame.display.flip()
 
 
